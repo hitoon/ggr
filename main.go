@@ -8,8 +8,11 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
+	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rodaine/table"
 	"github.com/skratchdot/open-golang/open"
 )
 
@@ -17,8 +20,10 @@ const (
 	chromeHistoryPath = "/Users/hitoshi/Library/Application Support/Google/Chrome/Default/History"
 	tmpFilePath       = ""
 	tmpFileName       = "tmpHistory"
-	querySize         = 10
+	querySize         = 20
 )
+
+var commandKeys = []string{"j", "i", "k", "n"}
 
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -27,6 +32,26 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func makeCommandList(historySize int) []string {
+	var commandList = []string{}
+	for i := 0; i < historySize; i++ {
+		remainder := i % len(commandKeys)  // 余り
+		quotient := i/len(commandKeys) + 1 // 商
+		key := commandKeys[remainder]
+		commandList = append(commandList, strings.Repeat(key, quotient))
+	}
+	return commandList
+}
+
+func getCommandIndex(str string, list []string) int {
+	for index, value := range list {
+		if str == value {
+			return index
+		}
+	}
+	return -1
 }
 
 func copyHistoryFile() string {
@@ -113,20 +138,34 @@ func main() {
 
 	historys := queryHistory(historyFileName)
 
+	// indexではなくコマンドで開けるようにする(jj, i, k等)
+	// コマンドのリストを作成(historysの数だけ)
+	commandList := makeCommandList(len(historys))
+
+	// table
+	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
+	columnFmt := color.New(color.FgYellow).SprintfFunc()
+	tbl := table.New("Index", "Command", "Title")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+
 	for index, history := range historys {
-		fmt.Printf(" # %-5d <-- %s \n", index, history.title)
+		tbl.AddRow(index, commandList[index], history.title)
 	}
+	tbl.Print()
 
-	fmt.Print("\n --- What # ? >> ")
-	var t int
-	fmt.Scan(&t)
-	fmt.Println(" --- Open: ", historys[t].title)
-	//TODO: indexではなくコマンドで開けるようにする(jj, i, k等)
 	//TODO: 入力値に対するエラー処理
+	fmt.Print("\n --- What Command ? >> ")
+	var t string
+	fmt.Scan(&t)
 
-	// TODO: 閉じたタブだけ表示する -> 技術的に無理
+	cmdidx := getCommandIndex(t, commandList)
+	title := historys[cmdidx].title
+	url := historys[cmdidx].url
+	fmt.Println(" --- Open: ", title)
+
+	// 閉じたタブだけ表示する -> 技術的に無理
 	/*マルウェアを防ぐため、Current TabsがSSNSという形式でFormatされている
 	  Chromagnonがそれをリバースエンジニアリングするプロジェクト*/
 
-	open.Run(historys[t].url) // 選択したタブを開く
+	open.Run(url) // 選択したタブを開く
 }
