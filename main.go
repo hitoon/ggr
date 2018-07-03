@@ -20,6 +20,15 @@ const (
 	querySize         = 10
 )
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
 func copyHistoryFile() string {
 	// chromeの検索履歴はsqlite形式
 	// lockされてるため、tmpFileにコピーして用いる
@@ -53,8 +62,9 @@ func queryHistory(filename string) []History {
 	}
 	defer db.Close()
 
-	//var query = "select * from urls ORDER BY id DESC LIMIT 10"
-	var query = "select * from urls ORDER BY id DESC LIMIT " + strconv.Itoa(querySize)
+	var query = "SELECT * FROM urls ORDER BY id DESC LIMIT " +
+		strconv.Itoa(querySize)
+
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatal(err)
@@ -62,7 +72,7 @@ func queryHistory(filename string) []History {
 	defer rows.Close()
 
 	var historys = []History{}
-
+	var titleList = []string{}
 	for rows.Next() {
 		history := History{}
 		err = rows.Scan(
@@ -77,9 +87,13 @@ func queryHistory(filename string) []History {
 		if err != nil {
 			log.Fatal(err)
 		}
-		historys = append(historys, history)
-	}
 
+		// タイトルが被っているものを削除
+		if !stringInSlice(history.title, titleList) {
+			titleList = append(titleList, history.title)
+			historys = append(historys, history)
+		}
+	}
 	return historys
 }
 
@@ -107,10 +121,12 @@ func main() {
 	var t int
 	fmt.Scan(&t)
 	fmt.Println(" --- Open: ", historys[t].title)
+	//TODO: indexではなくコマンドで開けるようにする(jj, i, k等)
 	//TODO: 入力値に対するエラー処理
 
-	//TODO: indexではなくコマンドで開けるようにする(jj, i, k等)
-	//TODO: 閉じたタブだけ表示する
-	//TODO: 被ってるのは削除する
-	open.Run(historys[t].url)
+	// TODO: 閉じたタブだけ表示する -> 技術的に無理
+	/*マルウェアを防ぐため、Current TabsがSSNSという形式でFormatされている
+	  Chromagnonがそれをリバースエンジニアリングするプロジェクト*/
+
+	open.Run(historys[t].url) // 選択したタブを開く
 }
