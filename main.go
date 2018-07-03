@@ -18,7 +18,7 @@ const (
 	chromeHistoryPath = "/Users/hitoshi/Library/Application Support/Google/Chrome/Default/History"
 	tmpFilePath       = ""
 	tmpFileName       = "tmpHistory"
-	querySize         = 10
+	querySize         = 20
 )
 
 var commandKeys = []string{"j", "i", "k", "n"}
@@ -141,7 +141,9 @@ func main() {
 	commandList := makeCommandList(len(historys))
 
 	for index, history := range historys {
-		fmt.Printf(" # %-4d %-6s <-- %s \n", index, commandList[index], history.title)
+		// TODO: 要素によって色変える
+		fmt.Printf("\x1b[37m  # %-4d %-6s <-- %s \n\x1b[0m",
+			index, commandList[index], history.title)
 	}
 
 	fmt.Print("\n --- What # ? >> ")
@@ -150,11 +152,13 @@ func main() {
 	//TODO: 入力値に対するエラー処理
 
 	cmdidx := getCommandIndex(t, commandList)
-	fmt.Println(" --- Open: ", historys[cmdidx].title)
+	title := historys[cmdidx].title
+	url := historys[cmdidx].url
+	fmt.Println(" --- Open: ", title)
 
 	// 閉じたタブだけ表示する -> 技術的に無理
 	/*マルウェアを防ぐため、Current TabsがSSNSという形式でFormatされている
 	  Chromagnonがそれをリバースエンジニアリングするプロジェクト*/
 
-	open.Run(historys[cmdidx].url) // 選択したタブを開く
+	open.Run(url) // 選択したタブを開く
 }
