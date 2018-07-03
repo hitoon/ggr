@@ -10,7 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rodaine/table"
 	"github.com/skratchdot/open-golang/open"
 )
 
@@ -140,16 +142,21 @@ func main() {
 	// コマンドのリストを作成(historysの数だけ)
 	commandList := makeCommandList(len(historys))
 
-	for index, history := range historys {
-		// TODO: 要素によって色変える
-		fmt.Printf("\x1b[37m  # %-4d %-6s <-- %s \n\x1b[0m",
-			index, commandList[index], history.title)
-	}
+	// table
+	headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
+	columnFmt := color.New(color.FgYellow).SprintfFunc()
+	tbl := table.New("Index", "Command", "Title")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 
-	fmt.Print("\n --- What # ? >> ")
+	for index, history := range historys {
+		tbl.AddRow(index, commandList[index], history.title)
+	}
+	tbl.Print()
+
+	//TODO: 入力値に対するエラー処理
+	fmt.Print("\n --- What Command ? >> ")
 	var t string
 	fmt.Scan(&t)
-	//TODO: 入力値に対するエラー処理
 
 	cmdidx := getCommandIndex(t, commandList)
 	title := historys[cmdidx].title
