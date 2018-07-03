@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/skratchdot/open-golang/open"
@@ -20,6 +21,8 @@ const (
 	querySize         = 10
 )
 
+var commandKeys = []string{"j", "i", "k", "n"}
+
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -27,6 +30,26 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func makeCommandList(historySize int) []string {
+	var commandList = []string{}
+	for i := 0; i < historySize; i++ {
+		remainder := i % len(commandKeys)  // 余り
+		quotient := i/len(commandKeys) + 1 // 商
+		key := commandKeys[remainder]
+		commandList = append(commandList, strings.Repeat(key, quotient))
+	}
+	return commandList
+}
+
+func getCommandIndex(str string, list []string) int {
+	for index, value := range list {
+		if str == value {
+			return index
+		}
+	}
+	return -1
 }
 
 func copyHistoryFile() string {
@@ -113,20 +136,25 @@ func main() {
 
 	historys := queryHistory(historyFileName)
 
+	// indexではなくコマンドで開けるようにする(jj, i, k等)
+	// コマンドのリストを作成(historysの数だけ)
+	commandList := makeCommandList(len(historys))
+
 	for index, history := range historys {
-		fmt.Printf(" # %-5d <-- %s \n", index, history.title)
+		fmt.Printf(" # %-4d %-6s <-- %s \n", index, commandList[index], history.title)
 	}
 
 	fmt.Print("\n --- What # ? >> ")
-	var t int
+	var t string
 	fmt.Scan(&t)
-	fmt.Println(" --- Open: ", historys[t].title)
-	//TODO: indexではなくコマンドで開けるようにする(jj, i, k等)
 	//TODO: 入力値に対するエラー処理
 
-	// TODO: 閉じたタブだけ表示する -> 技術的に無理
+	cmdidx := getCommandIndex(t, commandList)
+	fmt.Println(" --- Open: ", historys[cmdidx].title)
+
+	// 閉じたタブだけ表示する -> 技術的に無理
 	/*マルウェアを防ぐため、Current TabsがSSNSという形式でFormatされている
 	  Chromagnonがそれをリバースエンジニアリングするプロジェクト*/
 
-	open.Run(historys[t].url) // 選択したタブを開く
+	open.Run(historys[cmdidx].url) // 選択したタブを開く
 }
